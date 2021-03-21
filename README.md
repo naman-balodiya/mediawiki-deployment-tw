@@ -22,4 +22,4 @@ There is a VPC with public and private subnet, classic load balancer configure t
 Terraform Output: <br>
 Output will give you the the classsic load balancer dns to access application
 
-Note: EC2/mediawiki_deployment.yml is the ansible configuration to configure and deploy mediawiki app
+Note: EC2/mediawiki_deployment.yml is the ansible configuration to configure and deploy mediawiki app, Terraform config code in EC2, Network(vpc), CLB Modules
