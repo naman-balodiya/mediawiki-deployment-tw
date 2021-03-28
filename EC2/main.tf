@@ -49,9 +49,17 @@ resource "aws_instance" "app_instance" {
   key_name      = element(aws_key_pair.instance_key.*.key_name, 0)
   instance_type = var.instance_type
   #disable_api_termination = true
+#   user_data = <<-EOF
+#   	#!/bin/bash
+# 	sudo touch /home/ec2-user/test.js >> /tmp/ansi.log
+# 	sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm >> /tmp/ansi.log
+# 	sudo dnf config-manager --set-enabled codeready-builder-for-rhel-8-rhui-rpms >> /tmp/ansi.log
+# 	sudo dnf install ansible -y >> /tmp/ansi.log
+# 	sudo ansible-playbook /home/ec2-user/mediawiki_deployment.yml >> /tmp/ansi.log
+#   EOF
 
-  vpc_security_group_ids      = [element(aws_security_group.app_instance_sg.*.id, 0)]
-  subnet_id                   = var.public_subnet
+  vpc_security_group_ids = [element(aws_security_group.app_instance_sg.*.id, 0)]
+  subnet_id              = var.public_subnet
 
   associate_public_ip_address = true
 
@@ -62,30 +70,29 @@ resource "aws_instance" "app_instance" {
   }
 
   provisioner "file" {
-    content      = file("${path.module}/mediawiki_deployment.yml")
+    content     = file("${path.module}/mediawiki_deployment.yml")
     destination = "/home/ec2-user/mediawiki_deployment.yml"
-
+  
     connection {
-      type     = "ssh"
-      user     = "ec2-user"
-      host     = self.public_ip
-	  private_key = file("${path.module}/key.pem")
+      type        = "ssh"
+      user        = "ec2-user"
+      host        = self.public_ip
+      private_key = file("${path.module}/key.pem")
     }
   }
 
   provisioner "remote-exec" {
     inline = [
-	  "sudo su",
-	  "dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm",
-	  "dnf config-manager --set-enabled codeready-builder-for-rhel-8-rhui-rpms",
-	  "dnf install ansible -y",
-	  "ansible-playbook /home/ec2-user/mediawiki_deployment.yml"
+      "sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm",
+      "sudo dnf config-manager --set-enabled codeready-builder-for-rhel-8-rhui-rpms",
+      "sudo dnf install ansible -y",
+      "ansible-playbook /home/ec2-user/mediawiki_deployment.yml"
     ]
-	connection {
-      type     = "ssh"
-      user     = "ec2-user"
-      host     = self.public_ip
-	  private_key = file("${path.module}/key.pem")
+    connection {
+      type        = "ssh"
+      user        = "ec2-user"
+      host        = self.public_ip
+      private_key = file("${path.module}/key.pem")
     }
   }
 

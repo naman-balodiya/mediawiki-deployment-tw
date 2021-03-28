@@ -28,3 +28,7 @@ variable "instance_type" {
 variable "ami_id" {
   default = "ami-096fda3c22c1c990a"
 }
+
+variable "deployment_script" {
+  type = string
+}

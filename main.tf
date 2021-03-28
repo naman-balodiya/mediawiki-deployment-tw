@@ -20,7 +20,13 @@ module "Network" {
   private_cidr = var.private_subnet
 }
 
+module "S3" {
+  source = "./S3"
+  deployment_scripts_bucket = var.deployment_scripts_bucket
+}
+
 module "EC2" {
+  depends_on = [module.S3]
   source  = "./EC2"
   envname = var.envname
 
@@ -30,6 +36,7 @@ module "EC2" {
   dev_allowed_cidrs = var.dev_cidrs
   instance_type     = var.instance_type
   ami_id            = var.ami_id
+  deployment_script = "https://${module.S3.deployment_scripts_bucket}.s3.amazonaws.com/${module.S3.deployment_script}"
 }
 
 module "CLB" {
@@ -46,5 +53,5 @@ output "app_instances" {
 }
 
 output "app_url" {
-  value = module.CLB.clb_dns
+  value = "${module.CLB.clb_dns}"
 }

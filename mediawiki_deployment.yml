@@ -1,0 +1,86 @@
+---
+ - name: configure mediawiki on servers
+   hosts: localhost
+   become: yes
+   vars:
+    mysql_root_password: "Admin@123"
+    wiki_user_password: "Wiki@123"
+
+   tasks:
+    - name: Pre configuration installation
+      command: "{{item}}"
+      with_items:
+       - dnf module reset php -y
+       - dnf module enable php:7.4 -y
+       - dnf install httpd php php-mysqlnd php-gd php-xml mariadb-server mariadb php-mbstring php-json -y
+       - systemctl start mariadb
+       - systemctl status mariadb
+
+    - name: install mariadb
+      yum:
+        name:
+          - mariadb-server
+          - python3-PyMySQL
+        state: latest
+    - name: start mariadb
+      service:
+        name: mariadb
+        enabled: true
+        state: started
+    - name: mysql_root_password
+      mysql_user:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        user: root
+        check_implicit_admin: true
+        password: "{{ mysql_root_password }}"
+        host: localhost
+    - name: db creation
+      mysql_db: name=wikidatabase state=present login_user=root login_password="{{ mysql_root_password }}"
+    - name: mediawiki user creation
+      mysql_user:
+       login_user: root
+       login_password: "{{ mysql_root_password }}"
+       name: wiki
+       host: localhost
+       password: "{{ wiki_user_password }}"
+       priv: 'wikidatabase.*:ALL'
+       state: present
+    - name: installation configuration
+      shell: "{{item}}"
+      with_items:
+       - systemctl enable mariadb
+       - systemctl enable httpd
+       - yum install wget -y
+       - wget https://releases.wikimedia.org/mediawiki/1.35/mediawiki-1.35.1.tar.gz
+       - wget https://releases.wikimedia.org/mediawiki/1.35/mediawiki-1.35.1.tar.gz.sig
+       - tar -zxf mediawiki-1.35.1.tar.gz -C /var/www/
+       - ln -s /var/www/mediawiki-1.35.1/ /var/www/mediawiki
+       - chown -R apache:apache /var/www/mediawiki
+    - name: mediawiki httpd-1 conf
+      replace:
+       path: /etc/httpd/conf/httpd.conf
+       regexp: 'DirectoryIndex index.html'
+       replace: 'DirectoryIndex index.html index.html.var index.php'
+    - name: mediawiki httpd-2 conf
+      replace:
+       path: /etc/httpd/conf/httpd.conf
+       regexp: 'DocumentRoot "/var/www/html"'
+       replace: 'DocumentRoot "/var/www/mediawiki"'
+    - name: mediawiki httpd-3 conf
+      replace:
+       path: /etc/httpd/conf/httpd.conf
+       regexp: '<Directory "/var/www">'
+       replace: '<Directory "/var/www/mediawiki">'
+    - name: mediawiki httpd-4 conf
+      replace:
+       path: /etc/httpd/conf/httpd.conf
+       regexp: '<Directory "/var/www/html">'
+       replace: '<Directory "/var/www/mediawiki">'
+    - name: restarting httpd
+      shell: "{{item}}"
+      with_items:
+       - service httpd restart
+       - getenforce
+       - restorecon -FR /var/www/mediawiki-1.35.1/
+       - restorecon -FR /var/www/mediawiki
