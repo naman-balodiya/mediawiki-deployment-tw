@@ -53,5 +53,5 @@ output "app_instances" {
 }
 
 output "app_url" {
-  value = "${module.CLB.clb_dns}"
+  value = "http://${module.CLB.clb_dns}"
 }
